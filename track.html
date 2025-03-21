@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Vehicle Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      text-align: center;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 500px;
+      width: 80%;
+      margin: 20px auto;
+      border: 2px solid #007bff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #info {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+      display: none;
+    }
+    .button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin: 5px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    .button:hover {
+      background-color: #0056b3;
+    }
+    .button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #cancelBooking {
+      background-color: red;
+      display: none;
+    }
+    #driverControls, #userControls {
+      display: none;
+      margin-top: 20px;
+    }
+    #loginForm {
+      display: block;
+      margin: 20px auto;
+      padding: 20px;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #loginForm input, #loginForm select {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: calc(100% - 22px);
+    }
+    #loginForm button {
+      width: 100%;
+    }
+    h1, h2, h3 {
+      color: #007bff;
+    }
+    p {
+      color: #666;
+    }
+    #contactUs {
+      margin-top: 20px;
+      padding: 20px;
+      background-color: white;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #contactUs h3 {
+      color: #007bff;
+      font-weight: bold;
+    }
+    #contactUs p {
+      margin: 10px 0;
+    }
+    #aboutSection {
+      display: none;
+      margin-top: 20px;
+      padding: 20px;
+      background-color: white;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #aboutSection h3 {
+      color: #007bff;
+      font-weight: bold;
+    }
+    #aboutSection p {
+      margin: 10px 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      #map {
+        width: 100%;
+        height: 300px;
+      }
+      #loginForm, #aboutSection, #contactUs {
+        width: 90%;
+        margin: 10px auto;
+      }
+      .button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loginForm">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <select id="loginType">
+      <option value="user">Login as User</option>
+      <option value="driver">Login as Driver</option>
+    </select>
+    <button id="loginButton" class="button">Login</button>
+    <button id="aboutButton" class="button">About Us</button>
+    <button id="contactButton" class="button">Contact Us</button>
+  </div>
+
+  <div id="aboutSection">
+    <h3>About Our Products and Solutions</h3>
+    <p>Our products offer advanced tracking and monitoring solutions for emergency vehicles.</p>
+    <h3>Features</h3>
+    <p>Real-time tracking, efficient routing, user-friendly interface, and more.</p>
+    <button id="backToLogin" class="button">Back to Login</button>
+  </div>
+
+  <h1 id="trackerTitle" style="display: none;">Emergency Vehicle Tracker</h1>
+  <div id="map"></div>
+  <p id="info" style="display: none;">Select a vehicle to book.</p>
+
+  <!-- User controls -->
+  <div id="userControls">
+    <button id="bookAmbulanceA" class="button">Book Ambulance A</button>
+    <button id="bookAmbulanceB" class="button">Book Ambulance B</button>
+    <button id="bookAmbulanceC" class="button">Book Ambulance C</button>
+    <button id="cancelBooking" class="button">Cancel Booking</button>
+  </div>
+
+  <!-- Driver controls -->
+  <div id="driverControls">
+    <h3>Driver Dashboard</h3>
+    <button id="setAvailable" class="button">Set Available</button>
+    <button id="setBusy" class="button">Set Busy</button>
+    <p id="driverStatus">Status: Not Set</p>
+  </div>
+
+  <!-- Contact Us Section -->
+  <div id="contactUs">
+    <h3>Contact Us</h3>
+    <p><strong>Team Name:</strong> <span style="color: #007bff; font-weight: bold;">Emergency Vehicle Tracking System</span></p>
+    <p><strong>Email:</strong> contact@evts.com</p>
+    <p><strong>Phone:</strong> +123-456-7890</p>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      let userType = "";
+      let currentBooking = null;
+      let routingControl = null;
+      let userMarker = null;
+      let map;
+      let driverMarker = null;
+
+      let vehicles = [
+        { name: "Ambulance A", lat: 27.6166, lng: 85.5478, available: true, status: "Available", contact: "9864377078" },
+        { name: "Ambulance B", lat: 27.6334, lng: 85.5273, available: true, status: "Available", contact: "9845535241" },
+        { name: "Ambulance C", lat: 27.6649, lng: 85.3293, available: true, status: "Available", contact: "9856954789" }
+      ];
+
+      document.getElementById('loginButton').addEventListener('click', function() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        userType = document.getElementById('loginType').value;
+
+        if (!username || !password) {
+          alert('Please enter a username and password');
+          return;
+        }
+
+        if (userType === "driver" && !/A|B|C/.test(username.toUpperCase())) {
+          alert("Driver username must contain 'A', 'B', or 'C'.");
+          return;
+        }
+
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('trackerTitle').style.display = 'block';
+        document.getElementById('map').style.display = 'block';
+
+        if (userType === "user") {
+          document.getElementById('userControls').style.display = 'block';
+          document.getElementById('info').style.display = 'block';
+        } else {
+          document.getElementById('driverControls').style.display = 'block';
+        }
+
+        initializeTracker();
+      });
+
+      document.getElementById('aboutButton').addEventListener('click', function() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('aboutSection').style.display = 'block';
+      });
+
+      document.getElementById('contactButton').addEventListener('click', function() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('contactUs').style.display = 'block';
+      });
+
+      document.getElementById('backToLogin').addEventListener('click', function() {
+        document.getElementById('aboutSection').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+      });
+
+      function initializeTracker() {
+        map = L.map('map').setView([27.6166, 85.5478], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        vehicles.forEach(vehicle => {
+          vehicle.marker = L.marker([vehicle.lat, vehicle.lng])
+            .addTo(map)
+            .bindPopup(`
+              <strong>${vehicle.name}</strong><br>
+              <strong>Contact:</strong> ${vehicle.contact}<br>
+              <strong>Status:</strong> ${vehicle.status}
+            `);
+        });
+
+        trackUserPosition();
+      }
+
+      function trackUserPosition() {
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(position => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+
+            if (userMarker) {
+              userMarker.setLatLng([userLat, userLng]);
+            } else {
+              userMarker = L.marker([userLat, userLng], {
+                icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [25, 25] })
+              }).addTo(map).bindPopup("Your Location").openPopup();
+            }
+            map.setView([userLat, userLng], 12);
+          }, error => {
+            console.error("Geolocation error:", error);
+            alert("Error getting location. Please allow location access.");
+          }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        } else {
+          alert("Geolocation is not supported by your browser.");
+        }
+      }
+
+      function bookVehicle(vehicle) {
+        if (currentBooking) {
+          alert("You already have a booked vehicle. Cancel it first.");
+          return;
+        }
+
+        vehicle.available = false;
+        currentBooking = vehicle;
+        document.getElementById("info").innerText = `Booked: ${vehicle.name}`;
+        document.getElementById("cancelBooking").style.display = "block";
+
+        routeToVehicle(vehicle);
+      }
+
+      function routeToVehicle(vehicle) {
+        if (routingControl) {
+          map.removeControl(routingControl);
+        }
+
+        routingControl = L.Routing.control({
+          waypoints: [
+            L.latLng(vehicle.lat, vehicle.lng),
+            L.latLng(userMarker.getLatLng().lat, userMarker.getLatLng().lng)
+          ],
+          routeWhileDragging: true
+        }).addTo(map);
+      }
+
+      document.getElementById("bookAmbulanceA").addEventListener("click", () => bookVehicle(vehicles[0]));
+      document.getElementById("bookAmbulanceB").addEventListener("click", () => bookVehicle(vehicles[1]));
+      document.getElementById("bookAmbulanceC").addEventListener("click", () => bookVehicle(vehicles[2]));
+
+      document.getElementById("cancelBooking").addEventListener("click", () => {
+        if (currentBooking) {
+          currentBooking.available = true;
+          currentBooking.marker.bindPopup(`
+            <strong>${currentBooking.name}</strong><br>
+            <strong>Contact:</strong> ${currentBooking.contact}<br>
+            <strong>Status:</strong> Available
+          `).openPopup();
+          currentBooking = null;
+          document.getElementById("info").innerText = "Select a vehicle to book.";
+          document.getElementById("cancelBooking").style.display = "none";
+
+          if (routingControl) {
+            map.removeControl(routingControl);
+            routingControl = null;
+          }
+        }
+      });
+
+      document.getElementById("setAvailable").addEventListener("click", function() {
+        document.getElementById("driverStatus").innerText = "Status: Available";
+      });
+
+      document.getElementById("setBusy").addEventListener("click", function() {
+        document.getElementById("driverStatus").innerText = "Status: Busy";
+      });
+
+      setTimeout(trackUserPosition, 2000);
+    });
+  </script>
+</body>
+</html>
