@@ -174,8 +174,8 @@
   <div id="contactUs">
     <h3>Contact Us</h3>
     <p><strong>Team Name:</strong> <span style="color: #007bff; font-weight: bold;">Emergency Vehicle Tracking System</span></p>
-    <p><strong>Email:</strong> contact@evts.com</p>
-    <p><strong>Phone:</strong> +123-456-7890</p>
+    <p><strong>Email:</strong> prashantpokhrel05@gmail.com</p>
+    <p><strong>Phone:</strong> +977 9864377078</p>
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -341,6 +341,12 @@
       });
 
       setTimeout(trackUserPosition, 2000);
+
+      // Fetch data from backend
+      fetch("https://your-backend.vercel.app/api/hello")
+        .then(response => response.json())
+        .then(data => console.log(data))  // Check in console
+        .catch(error => console.error("Error:", error));
     });
   </script>
 </body>
