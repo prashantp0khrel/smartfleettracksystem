@@ -200,11 +200,7 @@
       let map;
       let driverMarker = null;
 
-      let vehicles = [
-        { name: "Ambulance A", lat: 27.6166, lng: 85.5478, available: true, status: "Available", contact: "9864377078" },
-        { name: "Ambulance B", lat: 27.6334, lng: 85.5273, available: true, status: "Available", contact: "9845535241" },
-        { name: "Ambulance C", lat: 27.6649, lng: 85.3293, available: true, status: "Available", contact: "9856954789" }
-      ];
+      let vehicles = [];
 
       // Show login form by default
       document.getElementById('loginForm').style.display = 'block';
@@ -273,9 +269,11 @@
         if (userType === "user") {
           document.getElementById('userControls').style.display = 'block';
           document.getElementById('info').style.display = 'block';
+          displayAvailableDrivers();
         } else if (userType === "driver") {
           document.getElementById('driverControls').style.display = 'block';
           document.getElementById('driverStatus').innerText = `Status: ${user.status}`;
+          storeDriverLocation(user);
         }
 
         initializeTracker();
@@ -313,18 +311,6 @@
           }).addTo(map);
         }
 
-        vehicles.forEach(vehicle => {
-          if (!vehicle.marker) {
-            vehicle.marker = L.marker([vehicle.lat, vehicle.lng])
-              .addTo(map)
-              .bindPopup(`
-                <strong>${vehicle.name}</strong><br>
-                <strong>Contact:</strong> ${vehicle.contact}<br>
-                <strong>Status:</strong> ${vehicle.status}
-              `);
-          }
-        });
-
         trackUserPosition();
       }
 
@@ -351,56 +337,44 @@
         }
       }
 
-      function bookVehicle(vehicle) {
-        if (currentBooking) {
-          alert("You already have a booked vehicle. Cancel it first.");
-          return;
+      function storeDriverLocation(user) {
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(position => {
+            const driverLat = position.coords.latitude;
+            const driverLng = position.coords.longitude;
+
+            user.lat = driverLat;
+            user.lng = driverLng;
+            localStorage.setItem('users', JSON.stringify(users));
+
+            if (driverMarker) {
+              driverMarker.setLatLng([driverLat, driverLng]);
+            } else {
+              driverMarker = L.marker([driverLat, driverLng], {
+                icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [25, 25] })
+              }).addTo(map).bindPopup(`Driver: ${user.username}`).openPopup();
+            }
+          }, error => {
+            console.error("Geolocation error:", error);
+            alert("Error getting location. Please allow location access.");
+          }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        } else {
+          alert("Geolocation is not supported by your browser.");
         }
-
-        vehicle.available = false;
-        currentBooking = vehicle;
-        document.getElementById("info").innerText = `Booked: ${vehicle.name}`;
-        document.getElementById("cancelBooking").style.display = "block";
-
-        routeToVehicle(vehicle);
       }
 
-      function routeToVehicle(vehicle) {
-        if (routingControl) {
-          map.removeControl(routingControl);
-        }
+      function displayAvailableDrivers() {
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const availableDrivers = users.filter(user => user.role === "driver" && user.status === "Available");
 
-        routingControl = L.Routing.control({
-          waypoints: [
-            L.latLng(vehicle.lat, vehicle.lng),
-            L.latLng(userMarker.getLatLng().lat, userMarker.getLatLng().lng)
-          ],
-          routeWhileDragging: true
-        }).addTo(map);
-      }
-
-      document.getElementById("bookAmbulanceA").addEventListener("click", () => bookVehicle(vehicles[0]));
-      document.getElementById("bookAmbulanceB").addEventListener("click", () => bookVehicle(vehicles[1]));
-      document.getElementById("bookAmbulanceC").addEventListener("click", () => bookVehicle(vehicles[2]));
-
-      document.getElementById("cancelBooking").addEventListener("click", () => {
-        if (currentBooking) {
-          currentBooking.available = true;
-          currentBooking.marker.bindPopup(`
-            <strong>${currentBooking.name}</strong><br>
-            <strong>Contact:</strong> ${currentBooking.contact}<br>
-            <strong>Status:</strong> Available
-          `).openPopup();
-          currentBooking = null;
-          document.getElementById("info").innerText = "Select a vehicle to book.";
-          document.getElementById("cancelBooking").style.display = "none";
-
-          if (routingControl) {
-            map.removeControl(routingControl);
-            routingControl = null;
+        availableDrivers.forEach(driver => {
+          if (!driver.marker) {
+            driver.marker = L.marker([driver.lat, driver.lng])
+              .addTo(map)
+              .bindPopup(`Driver: ${driver.username}<br>Status: ${driver.status}`);
           }
-        }
-      });
+        });
+      }
 
       setTimeout(trackUserPosition, 2000);
     });
