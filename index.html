@@ -55,8 +55,8 @@
       display: none;
       margin-top: 20px;
     }
-    #loginForm {
-      display: block;
+    #loginForm, #signupForm {
+      display: none;
       margin: 20px auto;
       padding: 20px;
       border: 2px solid #ccc;
@@ -64,14 +64,14 @@
       background-color: white;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    #loginForm input, #loginForm select {
+    #loginForm input, #signupForm input, #loginForm select {
       padding: 10px;
       margin: 5px;
       border-radius: 5px;
       border: 1px solid #ccc;
       width: calc(100% - 22px);
     }
-    #loginForm button {
+    #loginForm button, #signupForm button {
       width: 100%;
     }
     h1, h2, h3 {
@@ -131,15 +131,26 @@
 <body>
   <div id="loginForm">
     <h2>Login</h2>
-    <input type="text" id="username" placeholder="Username" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <select id="loginType">
-      <option value="user">Login as User</option>
-      <option value="driver">Login as Driver</option>
+    <input type="text" id="loginUsername" placeholder="Username" required>
+    <input type="password" id="loginPassword" placeholder="Password" required>
+    <select id="loginRole">
+      <option value="user">User</option>
+      <option value="driver">Driver</option>
     </select>
     <button id="loginButton" class="button">Login</button>
-    <button id="aboutButton" class="button">About Us</button>
-    <button id="contactButton" class="button">Contact Us</button>
+    <button id="signupButton" class="button">Sign Up</button>
+  </div>
+
+  <div id="signupForm">
+    <h2>Sign Up</h2>
+    <input type="text" id="signupUsername" placeholder="Username" required>
+    <input type="password" id="signupPassword" placeholder="Password" required>
+    <select id="signupRole">
+      <option value="user">User</option>
+      <option value="driver">Driver</option>
+    </select>
+    <button id="signupSubmit" class="button">Sign Up</button>
+    <button id="backToLogin" class="button">Back to Login</button>
   </div>
 
   <div id="aboutSection">
@@ -195,64 +206,123 @@
         { name: "Ambulance C", lat: 27.6649, lng: 85.3293, available: true, status: "Available", contact: "9856954789" }
       ];
 
-      document.getElementById('loginButton').addEventListener('click', function() {
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        userType = document.getElementById('loginType').value;
+      // Show login form by default
+      document.getElementById('loginForm').style.display = 'block';
 
-        if (!username || !password) {
+      document.getElementById('signupButton').addEventListener('click', function() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('signupForm').style.display = 'block';
+      });
+
+      document.getElementById('backToLogin').addEventListener('click', function() {
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+      });
+
+      document.getElementById('signupSubmit').addEventListener('click', function() {
+        const signupUsername = document.getElementById('signupUsername').value;
+        const signupPassword = document.getElementById('signupPassword').value;
+        const signupRole = document.getElementById('signupRole').value;
+
+        if (!signupUsername || !signupPassword) {
           alert('Please enter a username and password');
           return;
         }
 
-        if (userType === "driver" && !/A|B|C/.test(username.toUpperCase())) {
-          alert("Driver username must contain 'A', 'B', or 'C'.");
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const userExists = users.some(user => user.username === signupUsername);
+
+        if (userExists) {
+          alert('Username already exists. Please choose a different one.');
           return;
         }
 
+        users.push({ username: signupUsername, password: signupPassword, role: signupRole, status: "Available" });
+        localStorage.setItem('users', JSON.stringify(users));
+
+        alert('Signup successful! You can now log in.');
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+      });
+
+      document.getElementById('loginButton').addEventListener('click', function() {
+        const loginUsername = document.getElementById('loginUsername').value;
+        const loginPassword = document.getElementById('loginPassword').value;
+        const loginRole = document.getElementById('loginRole').value;
+
+        if (!loginUsername || !loginPassword) {
+          alert('Please enter a username and password');
+          return;
+        }
+
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(user => user.username === loginUsername && user.password === loginPassword && user.role === loginRole);
+
+        if (!user) {
+          alert('Invalid username, password, or role');
+          return;
+        }
+
+        alert('Login successful!');
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('trackerTitle').style.display = 'block';
         document.getElementById('map').style.display = 'block';
 
+        userType = user.role;
+
         if (userType === "user") {
           document.getElementById('userControls').style.display = 'block';
           document.getElementById('info').style.display = 'block';
-        } else {
+        } else if (userType === "driver") {
           document.getElementById('driverControls').style.display = 'block';
+          document.getElementById('driverStatus').innerText = `Status: ${user.status}`;
         }
 
         initializeTracker();
       });
 
-      document.getElementById('aboutButton').addEventListener('click', function() {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('aboutSection').style.display = 'block';
+      document.getElementById('setAvailable').addEventListener('click', function() {
+        const loginUsername = document.getElementById('loginUsername').value;
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(user => user.username === loginUsername);
+
+        if (user) {
+          user.status = "Available";
+          localStorage.setItem('users', JSON.stringify(users));
+          document.getElementById('driverStatus').innerText = `Status: Available`;
+        }
       });
 
-      document.getElementById('contactButton').addEventListener('click', function() {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('contactUs').style.display = 'block';
-      });
+      document.getElementById('setBusy').addEventListener('click', function() {
+        const loginUsername = document.getElementById('loginUsername').value;
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(user => user.username === loginUsername);
 
-      document.getElementById('backToLogin').addEventListener('click', function() {
-        document.getElementById('aboutSection').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
+        if (user) {
+          user.status = "Busy";
+          localStorage.setItem('users', JSON.stringify(users));
+          document.getElementById('driverStatus').innerText = `Status: Busy`;
+        }
       });
 
       function initializeTracker() {
-        map = L.map('map').setView([27.6166, 85.5478], 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+        if (!map) {
+          map = L.map('map').setView([27.6166, 85.5478], 12);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+          }).addTo(map);
+        }
 
         vehicles.forEach(vehicle => {
-          vehicle.marker = L.marker([vehicle.lat, vehicle.lng])
-            .addTo(map)
-            .bindPopup(`
-              <strong>${vehicle.name}</strong><br>
-              <strong>Contact:</strong> ${vehicle.contact}<br>
-              <strong>Status:</strong> ${vehicle.status}
-            `);
+          if (!vehicle.marker) {
+            vehicle.marker = L.marker([vehicle.lat, vehicle.lng])
+              .addTo(map)
+              .bindPopup(`
+                <strong>${vehicle.name}</strong><br>
+                <strong>Contact:</strong> ${vehicle.contact}<br>
+                <strong>Status:</strong> ${vehicle.status}
+              `);
+          }
         });
 
         trackUserPosition();
@@ -332,21 +402,7 @@
         }
       });
 
-      document.getElementById("setAvailable").addEventListener("click", function() {
-        document.getElementById("driverStatus").innerText = "Status: Available";
-      });
-
-      document.getElementById("setBusy").addEventListener("click", function() {
-        document.getElementById("driverStatus").innerText = "Status: Busy";
-      });
-
       setTimeout(trackUserPosition, 2000);
-
-      // Fetch data from backend
-      fetch("https://your-backend.vercel.app/api/hello")
-        .then(response => response.json())
-        .then(data => console.log(data))  // Check in console
-        .catch(error => console.error("Error:", error));
     });
   </script>
 </body>
